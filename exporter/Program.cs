@@ -1,7 +1,10 @@
 ﻿using CommandLine;
 using ConsoleTables;
+using CsvHelper;
+using CsvHelper.Configuration;
 using exporter.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 class Program
 {
@@ -21,6 +24,9 @@ class Program
 
         [Option("to", HelpText = "Ending date to fetch data from.")]
         public DateTime ToDate { get; set; } = DateTime.MaxValue;
+
+        [Option('o', "output", HelpText = "The output filepath to write to. If not specified, the output is stdout.")]
+        public string OutputPath { get; set; }
     }
 
     enum OutputFormat
@@ -56,7 +62,7 @@ class Program
                 case OutputFormat.Preview:
                     ShowPreview(dbContext, options.FromDate, options.ToDate, options.SelectedSensors); break;
                 case OutputFormat.Csv:
-                    SaveCsv(dbContext, options.FromDate, options.ToDate);  break;
+                    SaveCsv(dbContext, options.FromDate, options.ToDate, options.SelectedSensors, options.OutputPath);  break;
             }
         }
     }
@@ -110,9 +116,15 @@ class Program
             .ToList();
 
         //TODO:set from and to to 15 minute fixed
+
         var timestamps = new List<DateTime>();
-        var currentTimestamp = fromDate;
-        while (currentTimestamp < toDate)
+        var currentTimestamp = sensorsWithMeasurements
+            .Select(s => s.Measurements.MinBy(m => m.MeasuredAt))
+            .MinBy(s => s.MeasuredAt)?.MeasuredAt ?? fromDate;
+        var lastTimestamp = sensorsWithMeasurements
+            .Select(s => s.Measurements.MaxBy(m => m.MeasuredAt))
+            .MaxBy(s => s.MeasuredAt)?.MeasuredAt ?? toDate;
+        while (currentTimestamp <= lastTimestamp)
         {
             timestamps.Add(currentTimestamp);
             currentTimestamp = currentTimestamp.AddMinutes(15);
@@ -142,8 +154,94 @@ class Program
         table.Write();
     }
 
-    static void SaveCsv(MyDBContext dBContext, DateTime fromDate, DateTime toDate)
+    static void SaveCsv(MyDBContext dBContext, DateTime fromDate, DateTime toDate, IEnumerable<string> selectedSensors, string outputPath)
     {
-        //TODO
+        var measurementsGrouped = dBContext.Sensor
+            .Where(s => selectedSensors.Count() == 0 || selectedSensors.Contains(s.DomainId))
+            .Select(s => new
+            {
+                s.DomainId,
+                Measurements = s.Measurements
+                    .Where(m => !m.IsObsolete && fromDate <= m.MeasuredAt && m.MeasuredAt < toDate)
+                    .Select(m => new
+                    {
+                        s.DomainId,
+                        m.MeasuredAt,
+                        m.MeasuredValue,
+                        m.ReceivedAt
+                    })
+                    .GroupBy(m => m.ReceivedAt)
+                    .Select(g => g.OrderByDescending(m => m.ReceivedAt).First())
+            })
+            .ToList();
+
+        var headers = new List<string> { "MeasuredAt" };
+        var uniqueDomainIds = measurementsGrouped.Select(s => s.DomainId).Distinct();
+        headers.AddRange(uniqueDomainIds);
+        var domainIdToIndex = headers
+            .Select((header, index) => new { Header = header, Index = index })
+            .ToDictionary(item => item.Header, item => item.Index);
+
+        var rows = measurementsGrouped
+            .SelectMany(s => s.Measurements)
+            .GroupBy(m => m.MeasuredAt)
+            .OrderBy(group => group.Key)
+            .Select(group =>
+            {
+                var row = Enumerable.Repeat<object>("", 33).ToArray();
+                row[0] = group.Key;
+                foreach (var m in group)
+                {
+                    if (domainIdToIndex.TryGetValue(m.DomainId, out var index))
+                    {
+                        row[index] = m.MeasuredValue;
+                    }
+                }
+                return row;
+            })
+            .ToList();
+
+        //TODO:set from and to to 15 minute fixed
+
+        var minMeasuredAt = measurementsGrouped
+            .SelectMany(s => s.Measurements)
+            .Select(m => m.MeasuredAt)
+            .DefaultIfEmpty(DateTime.MaxValue)
+            .Min();
+
+        var maxMeasuredAt = measurementsGrouped
+            .SelectMany(s => s.Measurements)
+            .Select(m => m.MeasuredAt)
+            .DefaultIfEmpty(DateTime.MinValue)
+            .Max();
+
+        var timestamps = new List<DateTime>();
+        var currentTimestamp = minMeasuredAt;
+        while (currentTimestamp <= maxMeasuredAt)
+        {
+            timestamps.Add(currentTimestamp);
+            currentTimestamp = currentTimestamp.AddMinutes(15);
+        }
+
+        using (var writer = new StreamWriter(outputPath))
+        using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)))
+        {
+            foreach (var columnHeader in headers)
+            {
+                csv.WriteField(columnHeader);
+            }
+            csv.NextRecord();
+
+            foreach (var row in rows)
+            {
+                foreach (var measurement in row)
+                {
+                    csv.WriteField(measurement);
+                }
+                csv.NextRecord();
+            }
+        }
+
+        Console.WriteLine("CSV file created successfully.");
     }
 }

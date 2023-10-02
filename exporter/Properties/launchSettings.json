@@ -7,6 +7,10 @@
     "jan-mar summary": {
       "commandName": "Project",
       "commandLineArgs": "\"Server=(LocalDb)\\MSSQLLocalDB;Database=FloodpredictionDB;ApplicationIntent=ReadOnly\" --from 2023-01-01 --to 2023-03-01 --format Summary"
+    },
+    "full export": {
+      "commandName": "Project",
+      "commandLineArgs": "\"Server=(LocalDb)\\MSSQLLocalDB;Database=FloodpredictionDB;ApplicationIntent=ReadOnly\" --format Csv --output %USERPROFILE%\\Downloads\\FullDataExport.csv"
     }
   }
 }
