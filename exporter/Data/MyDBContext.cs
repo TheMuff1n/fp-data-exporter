@@ -12,12 +12,12 @@ namespace exporter.Data
     {
         public MyDBContext(DbContextOptions<MyDBContext> options) : base(options) { }
 
-        public DbSet<Station> Stations { get; set; }
+        public DbSet<Station> Station { get; set; }
 
-        public DbSet<Sensor> Sensors { get; set; }
+        public DbSet<Sensor> Sensor { get; set; }
 
-        public DbSet<SensorType> SensorTypes { get; set; }
+        public DbSet<SensorType> SensorType { get; set; }
 
-        public DbSet<Measurement> Measurements { get; set; }
+        public DbSet<Measurement> Measurement { get; set; }
     }
 }
