@@ -1,2 +1,11 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿using exporter.Data;
+using Microsoft.Extensions.Configuration;
+
+IConfiguration configuration = new ConfigurationBuilder()
+    .SetBasePath(Environment.CurrentDirectory)
+    .AddJsonFile("appsettings.json")
+    .Build();
+
+string? connectionString = configuration.GetConnectionString("MyDatabase");
+
+Console.WriteLine(connectionString);
