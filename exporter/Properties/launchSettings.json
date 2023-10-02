@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "exporter jan-mar preview": {
+      "commandName": "Project",
+      "commandLineArgs": "\"Server=(LocalDb)\\MSSQLLocalDB;Database=FloodpredictionDB;ApplicationIntent=ReadOnly\" --from 2023-01-01 --to 2023-03-01 --format Preview"
+    }
+  }
+}
