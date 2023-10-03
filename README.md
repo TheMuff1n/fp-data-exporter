@@ -12,5 +12,11 @@ Other than that, a way to install dependencies as listed in the .csproj file, bu
 The following example expects a ms sql local db server running in the background.
 
 ```
-exporter.exe "Server=(LocalDb)\MSSQLLocalDB;Database=FloodpredictionDB;ApplicationIntent=readonly;" --from 2023-01-01 --to 2023-01-03T23:59 --sensors 5000:10 5000:130 --format Csv --output export.csv
+exporter.exe "Server=(LocalDb)\MSSQLLocalDB;Database=FloodpredictionDB;ApplicationIntent=ReadOnly;Trusted_Connection=true;" --from 2023-01-01 --to 2023-01-03T23:59 --sensors 5000:10 5000:130 --format Csv --output export.csv
 ```
+
+Setting format to Csv exports in comma seperated value format with colums being firstly a column for timestamps and the rest sensor domain ids. Therefore rows are all requested sensor measurements for each individual (15 minute interval) timestamp.
+
+Other available formats are Summary (to see how many datasets exist for each sensor) and Preview, showing the command output in the CLI (choose a smaller time interval for this).
+
+Available sensors can be found in the Architecture repository in the internal TU Clausthal gitlab.
