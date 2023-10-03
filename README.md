@@ -20,3 +20,7 @@ Setting format to Csv exports in comma seperated value format with colums being 
 Other available formats are Summary (to see how many datasets exist for each sensor) and Preview, showing the command output in the CLI (choose a smaller time interval for this).
 
 Available sensors can be found in the Architecture repository in the internal TU Clausthal gitlab.
+
+# TODO
+
+Currently, the user has to export the data from the live system onto their own machine to have access, but in the future it would be convenient to have an endpoint in the API serving the same functionality as this console program.
